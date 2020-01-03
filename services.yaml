@@ -1,0 +1,10 @@
+services:
+    - name: Add
+      host: localhost
+      port: 3001
+    - name: Subtract
+      host: localhost
+      port: 3002
+    - name: Multiply
+      host: localhost
+      port: 3003
