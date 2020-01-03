@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
@@ -38,21 +39,15 @@ func Run() {
 }
 
 func addHandler(w http.ResponseWriter, req *http.Request) {
-	var x int
-	var y int
-
-	var err error
-
-	if (len(req.URL.Query()["x"]) != 1) && (len(req.URL.Query()["y"]) != 1) {
-		err = fmt.Errorf("Invalid arguments")
-	} else {
-		x, err = strconv.Atoi(req.URL.Query()["x"][0])
-		y, err = strconv.Atoi(req.URL.Query()["y"][0])
+	values := strings.Split(req.URL.Query()["o"][0], ",")
+	var res int
+	for _, n := range values {
+		i, err := strconv.Atoi(n)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		res += i
 	}
-	if err != nil {
-		fmt.Fprintf(w, "Failed to parse querystring")
-		w.WriteHeader(503)
-		return
-	}
-	fmt.Fprintf(w, "%d", x+y)
+	fmt.Fprintf(w, "%d", res)
 }

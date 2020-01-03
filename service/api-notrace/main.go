@@ -1,54 +1,35 @@
-package api
+package apinotrace
 
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/exporter/trace/stdout"
-	"go.opentelemetry.io/otel/plugin/httptrace"
-	"go.opentelemetry.io/otel/plugin/othttp"
+	"gopkg.in/yaml.v2"
 )
 
 var services Config
 
 func Start() {
-	std, err := stdout.NewExporter(stdout.Options{PrettyPrint: true})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	traceProvider, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-		sdktrace.WithSyncer(std))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	global.SetTraceProvider(traceProvider)
-
 	mux := http.NewServeMux()
-	mux.Handle("/", othttp.NewHandler(http.HandlerFunc(rootHandler), "root", othttp.WithPublicEndpoint()))
-	mux.Handle("/calculate", othttp.NewHandler(http.HandlerFunc(calcHandler), "calculate", othttp.WithPublicEndpoint()))
+	mux.Handle("/", http.HandlerFunc(rootHandler))
+	mux.Handle("/calculate", http.HandlerFunc(calcHandler))
 	services = GetServices()
 
 	log.Println("Initializing server...")
-	err = http.ListenAndServe(":3000", mux)
+	err := http.ListenAndServe(":3000", mux)
 	if err != nil {
 		log.Fatalf("Could not initialize server: %s", err)
 	}
 }
 
 func rootHandler(w http.ResponseWriter, req *http.Request) {
-	ctx := req.Context()
-	trace.CurrentSpan(ctx).AddEvent(ctx, "called root handler, getting discovered services")
 	fmt.Fprintf(w, "%s", services)
 }
 
@@ -65,16 +46,15 @@ func calcHandler(w http.ResponseWriter, req *http.Request) {
 		if strings.ToLower(calcRequest.Method) == strings.ToLower(n.Name) {
 			j, _ := json.Marshal(calcRequest.Operands)
 			url = fmt.Sprintf("http://%s:%d/%s?o=%s", n.Host, n.Port, strings.ToLower(n.Name), strings.Trim(string(j), "[]"))
-		} else {
-			http.Error(w, "could not find requested calculation method", http.StatusBadRequest)
 		}
 	}
 
+	if url == "" {
+		http.Error(w, "could not find requested calculation method", http.StatusBadRequest)
+	}
+
 	client := http.DefaultClient
-	ctx := req.Context()
-	request, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
-	ctx, request = httptrace.W3C(ctx, request)
-	httptrace.Inject(ctx, request)
+	request, _ := http.NewRequest("GET", url, nil)
 	res, err := client.Do(request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -94,4 +74,44 @@ func calcHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	fmt.Fprintf(w, "%d", resp)
+}
+
+type CalcRequest struct {
+	Method   string `json:"method"`
+	Operands []int  `json:"operands"`
+}
+
+func ParseCalcRequest(body io.Reader) (CalcRequest, error) {
+	var parsedRequest CalcRequest
+
+	err := json.NewDecoder(body).Decode(&parsedRequest)
+	if err != nil {
+		return parsedRequest, err
+	}
+
+	return parsedRequest, nil
+}
+
+type Config struct {
+	Services []struct {
+		Name string `yaml:"name"`
+		Host string `yaml:"host"`
+		Port int    `yaml:"port"`
+	} `yaml:"services"`
+}
+
+func GetServices() Config {
+	f, err := os.Open("services.yaml")
+	if err != nil {
+		log.Fatal("could not open config")
+	}
+	defer f.Close()
+
+	var cfg Config
+	decoder := yaml.NewDecoder(f)
+	err = decoder.Decode(&cfg)
+	if err != nil {
+		log.Fatal("could not process config")
+	}
+	return cfg
 }
