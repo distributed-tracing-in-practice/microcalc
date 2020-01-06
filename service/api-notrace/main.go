@@ -16,7 +16,7 @@ import (
 
 var services Config
 
-func Start() {
+func Run() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.HandlerFunc(rootHandler))
 	mux.Handle("/calculate", http.HandlerFunc(calcHandler))

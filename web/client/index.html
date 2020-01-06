@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>MicroCalc</title>
+  <base href="/">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+  Do some math!
+  <script type="text/javascript" src="client.js"></script>
+  <br/>
+  <div>
+    <form id="calc">
+        <label for="operands">Enter values: </label>
+        <input id="operands" name="values" value="1, 2">
+        <input type="radio" id="add" name="calcMethod" value="add" checked>
+        <label for="add">Add</label>
+        <input type="radio" id="subtract" name="calcMethod" value="subtract">
+        <label for="subtract">Subtract</label>
+        <button id="submit">Calculate</button>
+    </form>
+  </div>
+  <div>
+      <p>Result: <span id="result"></span></p>
+  </div>
+
+</body>
+
+</html>

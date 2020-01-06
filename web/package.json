@@ -1,0 +1,36 @@
+{
+  "name": "web-example",
+  "private": true,
+  "version": "0.0.1",
+  "description": "tracing sample",
+  "main": "index.js",
+  "scripts": {
+    "start": "webpack-dev-server -d --progress --colors --port 8090 --config webpack.config.js --hot --inline --host 0.0.0.0 --content-base client"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/austinlparker/microcalc.git"
+  },
+  "engines": {
+    "node": ">=8"
+  },
+  "author": "Austin Parker",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@babel/core": "^7.6.0",
+    "babel-loader": "^8.0.6",
+    "ts-loader": "^6.0.4",
+    "webpack": "^4.35.2",
+    "webpack-cli": "^3.3.9",
+    "webpack-dev-server": "^3.8.1",
+    "webpack-merge": "^4.2.2"
+  },
+  "dependencies": {
+    "@opentelemetry/exporter-collector": "^0.3.2",
+    "@opentelemetry/plugin-document-load": "^0.3.2",
+    "@opentelemetry/plugin-xml-http-request": "^0.3.2",
+    "@opentelemetry/scope-zone": "^0.3.2",
+    "@opentelemetry/tracing": "^0.3.2",
+    "@opentelemetry/web": "^0.3.2"
+  }
+}

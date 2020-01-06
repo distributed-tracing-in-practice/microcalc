@@ -1,7 +1,7 @@
 package main
 
-import "github.com/austinlparker/microcalc/service/api-notrace"
+import apinotrace "github.com/austinlparker/microcalc/service/api-notrace"
 
 func main() {
-	apinotrace.Start()
+	apinotrace.Run()
 }

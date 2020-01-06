@@ -47,14 +47,35 @@ func Start() {
 }
 
 func rootHandler(w http.ResponseWriter, req *http.Request) {
+	enableCors(&w, req)
+	if (*req).Method == "OPTIONS" {
+		return
+	}
+
 	ctx := req.Context()
 	trace.CurrentSpan(ctx).AddEvent(ctx, "called root handler, getting discovered services")
 	fmt.Fprintf(w, "%s", services)
 }
 
+func enableCors(w *http.ResponseWriter, req *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-B3-SpanId, X-B3-TraceId, X-B3-Sampled")
+}
+
 func calcHandler(w http.ResponseWriter, req *http.Request) {
-	calcRequest, err := ParseCalcRequest(req.Body)
+	ctx := req.Context()
+	enableCors(&w, req)
+	if (*req).Method == "OPTIONS" {
+		return
+	}
+
+	b, err := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
+	calcRequest, err := ParseCalcRequest(ctx, b)
+
 	if err != nil {
+		trace.CurrentSpan(ctx).AddEvent(ctx, err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -65,13 +86,15 @@ func calcHandler(w http.ResponseWriter, req *http.Request) {
 		if strings.ToLower(calcRequest.Method) == strings.ToLower(n.Name) {
 			j, _ := json.Marshal(calcRequest.Operands)
 			url = fmt.Sprintf("http://%s:%d/%s?o=%s", n.Host, n.Port, strings.ToLower(n.Name), strings.Trim(string(j), "[]"))
-		} else {
-			http.Error(w, "could not find requested calculation method", http.StatusBadRequest)
 		}
 	}
 
+	if url == "" {
+		http.Error(w, "could not find requested calculation method", http.StatusBadRequest)
+	}
+
 	client := http.DefaultClient
-	ctx := req.Context()
+	ctx = req.Context()
 	request, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 	ctx, request = httptrace.W3C(ctx, request)
 	httptrace.Inject(ctx, request)
