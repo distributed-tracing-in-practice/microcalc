@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -60,11 +61,12 @@ func rootHandler(w http.ResponseWriter, req *http.Request) {
 func enableCors(w *http.ResponseWriter, req *http.Request) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-B3-SpanId, X-B3-TraceId, X-B3-Sampled")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-B3-SpanId, X-B3-TraceId, X-B3-Sampled, traceparent")
 }
 
 func calcHandler(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
+	tr := global.TraceProvider().Tracer("api/calcHandler")
 	enableCors(&w, req)
 	if (*req).Method == "OPTIONS" {
 		return
@@ -72,7 +74,12 @@ func calcHandler(w http.ResponseWriter, req *http.Request) {
 
 	b, err := ioutil.ReadAll(req.Body)
 	defer req.Body.Close()
-	calcRequest, err := ParseCalcRequest(ctx, b)
+
+	var calcRequest CalcRequest
+	err = tr.WithSpan(ctx, "generateRequest", func(ctx context.Context) error {
+		calcRequest, err = ParseCalcRequest(ctx, b)
+		return err
+	})
 
 	if err != nil {
 		trace.CurrentSpan(ctx).AddEvent(ctx, err.Error())

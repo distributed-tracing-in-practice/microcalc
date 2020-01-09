@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
+	"google.golang.org/grpc/codes"
 )
 
 type CalcRequest struct {
@@ -15,13 +15,13 @@ type CalcRequest struct {
 }
 
 func ParseCalcRequest(ctx context.Context, body []byte) (CalcRequest, error) {
-	tracer := global.TraceProvider().Tracer("calcRequest")
 	var parsedRequest CalcRequest
-	tracer.Start(ctx, "parse")
+
 	trace.CurrentSpan(ctx).AddEvent(ctx, "attempting to parse body")
 	trace.CurrentSpan(ctx).AddEvent(ctx, fmt.Sprintf("%s", body))
 	err := json.Unmarshal(body, &parsedRequest)
 	if err != nil {
+		trace.CurrentSpan(ctx).SetStatus(codes.InvalidArgument)
 		trace.CurrentSpan(ctx).AddEvent(ctx, err.Error())
 		trace.CurrentSpan(ctx).End()
 		return parsedRequest, err

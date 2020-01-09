@@ -4,11 +4,8 @@ import { ConsoleSpanExporter, SimpleSpanProcessor } from '@opentelemetry/tracing
 import { WebTracer } from '@opentelemetry/web';
 import { XMLHttpRequestPlugin } from '@opentelemetry/plugin-xml-http-request';
 import { ZoneScopeManager } from '@opentelemetry/scope-zone';
-import { CollectorExporter } from '@opentelemetry/exporter-collector';
-import { B3Format } from '@opentelemetry/core';
 
 const webTracerWithZone = new WebTracer({
-  httpTextFormat: new B3Format(),
   scopeManager: new ZoneScopeManager(),
   plugins: [
     new XMLHttpRequestPlugin({
